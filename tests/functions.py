@@ -1,11 +1,7 @@
 import unittest
 from unittest.mock import patch, Mock
-
-from app.core import is_valid
-
-# from app import db  # Updated path for db module
-# from app.core import MAX_RETRIES, MAX_WINNERS  # If constants were moved
-import main  # For accessing functions in main.py
+from requests.exceptions import RequestException
+from app.core import is_valid, fetch_winners
 
 """
 These tests mock the API responses and verify that different parts of the
@@ -15,7 +11,7 @@ as expected.
 class TestMainFunctions(unittest.TestCase):
 
     # Fetching users works when users have the basic attributes.
-    @patch("main.requests.get")
+    @patch("requests.get")
     def test_fetch_winners_success(self, mock_get):
         mock_response = Mock()
         mock_response.json.return_value = [
@@ -25,15 +21,15 @@ class TestMainFunctions(unittest.TestCase):
         mock_response.status_code = 200
         mock_get.return_value = mock_response
 
-        result = main.fetch_winners()
+        result = fetch_winners()
         self.assertEqual(result[0], {"id": "1", "email": "test@example.com", "address": {"state": "New York"}})
         self.assertEqual(result[1], {"id": "2", "email": "test2@example.com", "address": {"state": "Ohio"}})
 
     # Fetching users returns `None` when the API throws an error.
-    @patch("main.requests.get")
+    @patch("requests.get")
     def test_fetch_winners_failure(self, mock_get):
-        mock_get.side_effect = Exception("API error")
-        result = main.fetch_winners()
+        mock_get.side_effect = RequestException("API error")
+        result = fetch_winners()
         self.assertIsNone(result)
 
     # is_valid(user) returns true when user has all required attributes. 
@@ -52,7 +48,7 @@ class TestMainFunctions(unittest.TestCase):
         self.assertFalse(is_valid(invalid_user))
 
     # is_valid(user) returns false when user has an address field but its value is `None`. 
-    def test_is_valid_with_address_not_dictionary():
+    def test_is_valid_with_address_not_dictionary(self):
         user = {"id": "1", "email": "test@example.com", "address": None}
         assert is_valid(user) is False
 
